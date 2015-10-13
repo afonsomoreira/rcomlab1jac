@@ -349,6 +349,7 @@ int llopen(int fd, int txrx) {
 }
 
 int llread(int fd, char* buffer){
+	printf("[LLREAD] START\n");
 	int num_chars_read = 0;
 
 	int Type = receiveframe(buffer, &num_chars_read);
@@ -372,6 +373,7 @@ int llread(int fd, char* buffer){
 }
 
 int llwrite(int fd, unsigned char* buffer, int length){
+    printf("[LLWRITE] START\n");
     
 	linkLayer.timeout = 0;
 	int CompleteFrames =  length / MAX_SIZE;
