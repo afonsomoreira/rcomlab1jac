@@ -501,6 +501,7 @@ int main (int argc, char** argv) {
 	
 	printf("opening llopen with %d\n", txrx);
 	rs = llopen(fd, txrx);
+	linkLayer.fd = rs;
 	printf("result : %d\n", rs);
 	
 	if(txrx == TRANSMITTER)
