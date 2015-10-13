@@ -69,7 +69,7 @@ void atende() {
 
 
 unsigned int byte_stuffing(unsigned char *data, unsigned char *stuffed_data, int length) {
-	
+	printf("[stuffing] START\n");
 	unsigned int i;
 	unsigned int j = 0;	
 	int lengthAfterStuffing = length;
@@ -92,7 +92,7 @@ unsigned int byte_stuffing(unsigned char *data, unsigned char *stuffed_data, int
 
 
 int sendSupervisionFrame(int fd, unsigned char C) {
-	
+	printf("[sendSup] START\n");
 	int n_bytes = 0;
 	//unsigned char bytes[5];
 	//Este vetor de bytes corresponde à frame a ser enviada. Podiamos também usar a variável frame?
@@ -125,7 +125,7 @@ int sendSupervisionFrame(int fd, unsigned char C) {
 }
 
 int sendInformationFrame(unsigned char * data, int length){
-	
+	printf("[sendinf] START\n");
 	unsigned char stuffed_data[MAX_SIZE-6];
 	
 	if(length > MAX_SIZE/2){
@@ -164,6 +164,7 @@ int sendInformationFrame(unsigned char * data, int length){
 }
 
 int receiveframe(char *data, int * length) {
+	printf("[receiveframe] START\n");
 	char* charread = malloc(1); //char in serial port
 	
 	int state = 0; //state machine state
@@ -304,6 +305,7 @@ int receiveframe(char *data, int * length) {
 
 
 int llopen(int fd, int txrx) {
+	printf("[LLOPEN] START\n");
 	
 	linkLayer.sequenceNumber = 0;
 	
@@ -332,12 +334,8 @@ int llopen(int fd, int txrx) {
 	
 	else if (txrx == RECEIVER) {
 		
-		//printf("Waiting for SET\n");
-		while(1) {	
-			
-			if( receiveframe(NULL,NULL) == SET_RECEIVED) break;
-			//meter no while??
-		}
+		printf("Waiting for SET\n");
+		if(receiveframe(NULL,NULL) == SET_RECEIVED) printf("SET_RECEIVED");
 	
 		sendSupervisionFrame(fd,UA);
 		printf("UA sent\n");
