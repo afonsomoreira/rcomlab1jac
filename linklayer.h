@@ -20,7 +20,7 @@
 #define TRUE 1
 #define MAXR 3 //no maximo de falhas
 #define MAXT 1 //valor do temporizador
-#define MAX_SIZE 512 //Tamanho maximo de uma frame APÓS stuffing
+#define MAX_SIZE 256 //Tamanho maximo de uma frame APÓS stuffing
 
 #define FLAG 0x7E
 #define ESC 0x7D
