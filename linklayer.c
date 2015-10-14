@@ -1,6 +1,7 @@
 #include "linklayer.h"
 
 //Ola, sou o Afonso, isto é um teste.	
+// Nicholas Cage <3
 
 void atende() {
 	printf("[ALARM] #%d\n", conta);
