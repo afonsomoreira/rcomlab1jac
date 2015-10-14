@@ -1,9 +1,16 @@
 #include "linklayer.h"
 
 void atende() {
-	printf("[ALARM] #%d\n", conta);
-	alarm_flag = 1;
+	if(linkLayer.numTransmissions < MAXR){
+		printf("[DEBUG] Timeout %d waiting for UA, re-sending SET\n",  linkLayer.numTransmissions);
+		sendSupervisionFrame(linkLayer.fd, SET);
+		alarm(linkLayer.timeout);
+	}else{
+		printf("[DEBUG] Receiver doesnt seem to like me, I give up :(\n");
+			//llclose();
+		}
 	linkLayer.numTransmissions++;
+
 }
 
 
@@ -120,7 +127,7 @@ int receiveframe(char *data, int * length) {
 	while(stop == FALSE) { 
 		//printf("[receiveframe] State machine -> %d\n", state);
 		Rreturn = read(linkLayer.fd, charread, 1); //read 1 char
-		if (Rreturn == 1) printf("[Receiveframe] read -> %x (%d)", *charread, Rreturn);
+		if (Rreturn == 1) printf("[Receiveframe] read -> %x (%d)\n", *charread, Rreturn);
 		if (Rreturn < 0) return -1; //nothing
 		
 		switch(state) {
@@ -140,48 +147,48 @@ int receiveframe(char *data, int * length) {
 			}
 			
 			case 2:{ //Address -> Command (many commands possible)
-				printf("[receiveframe] COMMAND, char = %x\n", *charread);
+				printf("[receiveframe] COMMAND, char = %x ->", *charread);
 				Cread = *charread;
 				if(*charread == SET)  {
-					printf("[receiveframe] SET, char = %x\n", *charread);
+					printf("SET\n");
 					Type = SET_RECEIVED;
 					state = 3;
 				}
 				
 				else if(*charread == UA) {
-					printf("[receiveframe] UA\n");
+					printf("UA\n");
 					Type = UA_RECEIVED;
 					state = 3;
 					}
 				
 				else if(*charread == DISC) {
-					printf("[receiveframe] DISC\n");
+					printf("DISC\n");
 					Type = DISC_RECEIVED;
 					state = 3;
 				}
 				
 				else if(*charread == (RR | (linkLayer.sequenceNumber << 7))) {
-					printf("[receiveframe] RR\n");
+					printf("RR\n");
 					Type = RR_RECEIVED;
 					state = 3;
 				}
 				
 				else if(*charread == (REJ | (linkLayer.sequenceNumber << 7))) {
-					printf("[receiveframe] REJ\n");
+					printf("REJ\n");
 					Type = REJ_RECEIVED;
 					state = 3;
 				}
 				
 				else if(*charread == (linkLayer.sequenceNumber << 6)) {
-					printf("[receiveframe] DATA\n");
+					printf("DATA\n");
 					Type = DATA_RECEIVED;
 					state = 3;
 				}
 				
 				else if(*charread == FLAG) state = 1;
 				else state = 0;
-
-			}
+				break;
+				}
 				
 			case 3:{ //command -> BBC1
 				printf("[receiveframe] BCC, char = %x\n", *charread);
@@ -199,10 +206,11 @@ int receiveframe(char *data, int * length) {
 					if(Type == DATA_RECEIVED) state = 4;
 					else state = 6;						
 				}
+				break;
 			}
 				
 			case 4:{ //Data expected
-					
+				printf("[receiveframe] DATA EXPECTED\n");	
 				if (*charread == FLAG)
 					{
 						char BCC2exp = data[0];
@@ -236,6 +244,7 @@ int receiveframe(char *data, int * length) {
 				}
 			
 			case 5:{ //Destuffing
+				
 				data[num_chars_read] = *charread ^ STFF;
 				num_chars_read++;
 				state = 4;
@@ -254,7 +263,7 @@ int receiveframe(char *data, int * length) {
 			printf(",%d]", state);
 		}
 	}
-	printf(" Done\n");
+	printf("[receiveframe] STOP -> %d\n", Type);
 	free(charread);
 	return Type;
 					
@@ -268,22 +277,24 @@ int llopen(int fd, int txrx) {
 	
 	if(txrx == TRANSMITTER) {
 		
+		int tmpvar;
 		(void) signal(SIGALRM, atende);
 		linkLayer.numTransmissions = 0;
 		linkLayer.timeout = MAXT;
-		
-		while(linkLayer.numTransmissions < MAXT ){	
-		
-			if(alarm_flag){
-				
-				sendSupervisionFrame(fd, (unsigned char) SET); 
-				alarm(linkLayer.timeout);                 				// activa alarme de 3s
-				alarm_flag=0;
-			}
-	
-			if( receiveframe(NULL,NULL) != UA_RECEIVED ) return -1;
-			else if(receiveframe(NULL,NULL) == UA_RECEIVED) return fd;
+		printf("[llopen] Send SET\n");
+		sendSupervisionFrame(fd, SET);
+		alarm(linkLayer.timeout);
+		printf("[llopen] EXPETING UA\n");	
+		tmpvar = receiveframe(NULL,NULL);
+		if( tmpvar != UA_RECEIVED ){
+			printf("[LLOPEN - TRANSMITTER] NOT UA\n");
+			return -1; //return error
+		}
+		else if(tmpvar == UA_RECEIVED) {
+			printf("[LLOPEN - TRANSMITTER] UA RECEIVED\n");
 			
+			
+			return fd; //retorn file ID
 		}
 		return -1;	
 		
@@ -309,18 +320,8 @@ int llread(int fd, char* buffer) {
 
 	int Type = receiveframe(buffer, &num_chars_read);
 
-
-	if(Type == DISC_RECEIVED){
-		sendSupervisionFrame(fd, DISC);
-		
-		while(receiveframe(NULL,NULL) != UA_RECEIVED);
-		
-		//llclose(linkLayer.fd);
-		printf("[LLWRITE] END\n");
-		return 0;
-		
-	}
-	else if(Type == DATA_RECEIVED)	{
+	if(Type == DATA_RECEIVED)	{
+		printf("[LLREAD] END\n");
 		return num_chars_read;
 	}
 
@@ -344,7 +345,8 @@ int llwrite(int fd, unsigned char* buffer, int length) {
 	
 		flag = 1;
 		while(linkLayer.numTransmissions < MAXT && flag) {	
-		
+			printf("[LLWRITE] Frames = %d\n", i);
+			
 			if(alarm_flag){
 				
 				sendInformationFrame(buffer + (i * MAX_SIZE), MAX_SIZE);
@@ -364,7 +366,7 @@ int llwrite(int fd, unsigned char* buffer, int length) {
 	}
 	
 	if(remainingBytes > 0){
-		printf("Wait, theres one more\n");
+		printf("[LLWRITE] START\n");
 		flag = 1;
 		while(linkLayer.numTransmissions < MAXT && flag) {	
 		
@@ -394,8 +396,7 @@ int llclose(int fd, int txrx) {
 	return 1;
 }
 
-int config(char *fd)
-{
+int config(char *fd) {
 	int c, res;
 	struct termios oldtio,newtio;
 	char buf[255];
@@ -463,20 +464,22 @@ int main (int argc, char** argv) {
 	printf("Reciver - 0\nTransmitter -1\n");
 	scanf("%d", &txrx);
 	
-	printf("opening llopen with %d\n", txrx);
+	printf("[MAIN] Opening llopen with %d\n", txrx);
 	llopen(linkLayer.fd, txrx);
-	printf("result\n");
+	printf("[MAIN] LLOPEN SUCCESFULL\n");
 	
 	if(txrx == TRANSMITTER)
 	{
-		unsigned char buffer[3] = "ola";
-		llwrite(linkLayer.fd, buffer, 3);
+		unsigned char buffer[256] = "Eu Sou o jose delfim ribeiro valverdeasdasdasdasdasfasfsadfasdasdasdsafsdfasdfsadas ";
+		llwrite(linkLayer.fd, buffer, 60);
 	}
 	else
 	{
 		char buffer[3];
 		llread(fd,buffer);
+		puts(buffer);
 	}
+	
 	return 1;
 }
 	
