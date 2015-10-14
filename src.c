@@ -435,7 +435,7 @@ int llwrite(int fd, unsigned char* buffer, int length){
 		}
 		
 	}
-
+	printf("[LLWRITE] END\n");
 	return 0;
 
 }
