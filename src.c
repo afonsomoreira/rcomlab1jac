@@ -120,7 +120,7 @@ int sendSupervisionFrame(int fd, unsigned char C) {
 	//linkLayer.frame[5] = 0; 
 	
 	n_bytes = write(fd, linkLayer.frame, 5); //6?
-	printf(" Bytes written: %d\n", n_bytes);
+	printf("[sendSup] Bytes written: %d\n", n_bytes);
 	return n_bytes;
 }
 
@@ -160,7 +160,7 @@ int sendInformationFrame(unsigned char * data, int length){
 	linkLayer.frame[4+lengthAfterStuffing] = FLAG;
 	
 	return (int) write(linkLayer.fd, linkLayer.frame, lengthAfterStuffing+6); // "+6" pois somamos 2FLAG,2BCC,1A,1C
-	
+	printf("[sendinf] END\n");
 }
 
 int receiveframe(char *data, int * length) {
@@ -183,12 +183,14 @@ int receiveframe(char *data, int * length) {
 		
 		switch(state) {
 			case 0:{ //State Start
+				printf("[receiveframe] START\n");
 				if(*charread == FLAG) state = 1;
 				break;
 			}
 			
 			case 1:{ //Flag -> expect address
 				if(*charread == A) {
+					printf("[receiveframe] ADRESS\n");
 					state = 2;
 					Aread = *charread;
 				} else if(*charread == FLAG) state = 1; //another flag
@@ -196,6 +198,7 @@ int receiveframe(char *data, int * length) {
 			}
 			
 			case 2:{ //Address -> Command (many commands possible)
+				printf("[receiveframe] COMMAND\n");
 				Cread = *charread;
 				if(*charread == SET)  {
 						Type = SET_RECEIVED;
@@ -203,29 +206,34 @@ int receiveframe(char *data, int * length) {
 					}
 				
 				else if(*charread == UA) {
-						Type = UA_RECEIVED;
-						state = 3;
+					printf("[receiveframe] UA\n");
+					Type = UA_RECEIVED;
+					state = 3;
 					}
 				
 				else if(*charread == DISC) {
-						Type = DISC_RECEIVED;
-						state = 3;
+					printf("[receiveframe] DISC\n");
+					Type = DISC_RECEIVED;
+					state = 3;
 				}
 				
 				else if(*charread == (RR | (linkLayer.sequenceNumber << 7))) {
-						Type = RR_RECEIVED;
-						state = 3;
-					}
+					printf("[receiveframe] RR\n");
+					Type = RR_RECEIVED;
+					state = 3;
+				}
 				
 				else if(*charread == (REJ | (linkLayer.sequenceNumber << 7))) {
-						Type = REJ_RECEIVED;
-						state = 3;
-					}
+					printf("[receiveframe] REJ\n");
+					Type = REJ_RECEIVED;
+					state = 3;
+				}
 				
 				else if(*charread == (linkLayer.sequenceNumber << 6)) {
-						Type = DATA_RECEIVED;
-						state = 3;
-					}
+					printf("[receiveframe] DATA\n");
+					Type = DATA_RECEIVED;
+					state = 3;
+				}
 				
 				else if(*charread == FLAG) state = 1;
 				else state = 0;
@@ -407,7 +415,7 @@ int llwrite(int fd, unsigned char* buffer, int length){
 	}
 	
 	if(remainingBytes > 0){
-		//printf("Wait, theres one more\n");
+		printf("Wait, theres one more\n");
 		flag = 1;
 		while(linkLayer.numTransmissions < MAXT && flag) {	
 		
