@@ -1,5 +1,7 @@
 #include "linklayer.h"
 
+//Ola, sou o Afonso, isto é um teste.	
+
 void atende() {
 	printf("[ALARM] #%d\n", conta);
 	alarm_flag = 1;
@@ -457,6 +459,7 @@ int config(char *fd)
 
 int main (int argc, char** argv) {
 	int txrx;
+	
 	
 	linkLayer.fd = config(argv[1]);
 	//write(linkLayer.fd, "ola", 3);
